@@ -75,7 +75,7 @@ async def create_card(inter,
 
   if use_all == 'True':
     cur.execute(
-        f"""SELECT COUNT(*) FROM users WHERE username = '{user}' AND discord_id = '{inter.author.id}'"""
+        f"""SELECT amount(*) FROM users WHERE username = '{user}' AND discord_id = '{inter.author.id}'"""
     )
     default = int(cur.fetchone()[0])
 
@@ -208,7 +208,7 @@ async def transfer(
     inter,
     user=commands.Param(description='Ник кому хотите перевести деньги'),
     cardname=commands.Param(description='Карта с которой списать деньги'),
-    count: int = commands.Param(description='Сумма перевода', min_value=1),
+    amount: int = commands.Param(description='Сумма перевода', min_value=1),
     descrition=commands.Param(description='Сообщение')):
 
   await inter.response.defer()
@@ -248,9 +248,9 @@ async def transfer(
     if user_send == user:
         await inter.send('Перевод на свой счет запрещен')
     else:
-        if balance_sender - count >= 0:
-            balance_sender = balance_sender - count
-            balance_recipient = balance_recipient + count
+        if balance_sender - amount >= 0:
+            balance_sender = balance_sender - amount
+            balance_recipient = balance_recipient + amount
             cur.execute(f"""UPDATE users 
                             SET balance = {balance_sender}
                             WHERE username = '{user_send}' AND cardname = '{cardname}' AND discord_id = '{inter.author.id}'"""
@@ -274,7 +274,7 @@ async def transfer(
                             value=f'{balance_sender} АР',
                             inline=False)
             embed.add_field(name='Сумма перевода: ',
-                            value=f'{count} АР',
+                            value=f'{amount} АР',
                             inline=False)
             embed.add_field(name='Сообщение: ', value=descrition, inline=False)
 
@@ -299,7 +299,7 @@ async def transfer(
                                     value=f'{balance_sender} АР',
                                     inline=False)
             embed_admin.add_field(name='Сумма перевода: ',
-                                    value=f'{count} АР',
+                                    value=f'{amount} АР',
                                     inline=False)
             embed_admin.add_field(name='Старый баланс получателя: ',
                                     value=f'{old_balance_recipient} АР',
@@ -332,7 +332,7 @@ async def transfer(
                                         value=f'{balance_recipient} АР',
                                         inline=False)
             embed_recipient.add_field(name='Сумма перевода: ',
-                                        value=f'{count} АР',
+                                        value=f'{amount} АР',
                                         inline=False)
             embed_recipient.add_field(name='Сообщение: ',
                                         value=descrition,
@@ -358,7 +358,7 @@ async def transfer(
 async def swap(inter,
                card_1=commands.Param(description='Первый счет'),
                card_2=commands.Param(description='Второй счет'),
-               count: int = commands.Param(description='Сумма перевода',
+               amount: int = commands.Param(description='Сумма перевода',
                                            min_value=1)):
 
   await inter.response.defer()
@@ -387,9 +387,9 @@ async def swap(inter,
   )
   username = cur.fetchone()[0]
 
-  if first_balance - count >= 0:
-    first_balance = first_balance - count
-    second_balance = second_balance + count
+  if first_balance - amount >= 0:
+    first_balance = first_balance - amount
+    second_balance = second_balance + amount
     cur.execute(f"""UPDATE users 
                     SET balance = {first_balance}
                     WHERE discord_id = '{inter.author.id}' AND cardname = '{card_1}'"""
@@ -415,7 +415,7 @@ async def swap(inter,
     embed.add_field(name='Новый баланс: ',
                     value=f'{first_balance} АР',
                     inline=False)
-    embed.add_field(name='Сумма перевода: ', value=f'{count} АР', inline=False)
+    embed.add_field(name='Сумма перевода: ', value=f'{amount} АР', inline=False)
     embed.add_field(name='Вторая карта: ', value=card_2, inline=False)
     embed.add_field(name='Старый баланс: ',
                     value=f'{old_second_balance} АР',
@@ -441,7 +441,7 @@ async def swap(inter,
                           value=f'{first_balance} АР',
                           inline=False)
     embed_admin.add_field(name='Сумма перевода: ',
-                          value=f'{count} АР',
+                          value=f'{amount} АР',
                           inline=False)
     embed_admin.add_field(name='Вторая карта: ', value=card_2, inline=False)
     embed_admin.add_field(name='Старый баланс: ',
@@ -565,15 +565,15 @@ async def fines(inter):
   for row in result:
     fmt = "{0}"
     cur.execute(
-        f"""SELECT count FROM fines WHERE discord_id = '{inter.author.id}' AND description = '{fmt.format(*row)}'"""
+        f"""SELECT amount FROM fines WHERE discord_id = '{inter.author.id}' AND description = '{fmt.format(*row)}'"""
     )
-    count = cur.fetchone()
+    amount = cur.fetchone()
     cur.execute(
         f"""SELECT id FROM fines WHERE discord_id = '{inter.author.id}' AND description = '{fmt.format(*row)}'"""
     )
     id = cur.fetchone()[0]
     embed.add_field(name=fmt.format(*row), value='', inline=True)
-    embed.add_field(name=f'{fmt.format(*count)} АР', value='')
+    embed.add_field(name=f'{fmt.format(*amount)} АР', value='')
     embed.add_field(name=id, value='')
     embed.add_field(name='', value='', inline=False)
 
@@ -587,7 +587,7 @@ async def fines(inter):
     name='pay',
     description='Оплатить штраф'
 )
-async def pay(inter, id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99), count: int = commands.Param(description='Сколько хотиите оплатить', min_value = 1), cardname = commands.Param(description='Карта с которой хотите произвести оплату')):
+async def pay(inter, id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99), amount: int = commands.Param(description='Сколько хотиите оплатить', min_value = 1), cardname = commands.Param(description='Карта с которой хотите произвести оплату')):
   conn = mc.connect(
       host='db.worldhosts.fun',  # создание курсора
       user='u4980_7K91YKi39n',
@@ -598,17 +598,17 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
 
   cur.execute(f"""SELECT balance FROM users WHERE discord_id = '{inter.author.id}' AND cardname = '{cardname}'""")
   balance = int(cur.fetchone()[0])
-  cur.execute(f"""SELECT count FROM fines WHERE discord_id = '{inter.author.id}' AND id = '{id}'""")
-  count_fine = int(cur.fetchone()[0])
+  cur.execute(f"""SELECT amount FROM fines WHERE discord_id = '{inter.author.id}' AND id = '{id}'""")
+  amount_fine = int(cur.fetchone()[0])
 
-  if count_fine < count:
-    count = count_fine
+  if amount_fine < amount:
+    amount = amount_fine
     
   old_balance = balance
 
-  if count_fine - count <= 0:
-    if balance - count > 0:
-      balance = balance - count
+  if amount_fine - amount <= 0:
+    if balance - amount > 0:
+      balance = balance - amount
     cur.execute(f"""DELETE FROM fines WHERE discord_id = '{inter.author.id}' AND id = {id}""")
     cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{inter.author.id}' AND cardname = '{cardname}'""")
     
@@ -619,8 +619,8 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
       colour=0xe60082,
     )
     embed.add_field(name='Действие: ', value='Оплата штрафа', inline=False)
-    embed.add_field(name='Сумма штрафа', value=f'{count_fine}', inline=False)
-    embed.add_field(name='Оплачено: ', value=f'{count}', inline=False)
+    embed.add_field(name='Сумма штрафа', value=f'{amount_fine}', inline=False)
+    embed.add_field(name='Оплачено: ', value=f'{amount}', inline=False)
     embed.add_field(name='Карта: ', value=cardname, inline=False)
     embed.add_field(name='Старый баланс: ',
                           value=f'{old_balance} АР',
@@ -640,8 +640,8 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
     )
     embed_admin.add_field(name='Игрок: ', value=username, inline=False)
     embed_admin.add_field(name='Действие: ', value='Оплата штрафа', inline=False)
-    embed_admin.add_field(name='Сумма штрафа', value=f'{count_fine}', inline=False)
-    embed_admin.add_field(name='Оплачено: ', value=f'{count}', inline=False)
+    embed_admin.add_field(name='Сумма штрафа', value=f'{amount_fine}', inline=False)
+    embed_admin.add_field(name='Оплачено: ', value=f'{amount}', inline=False)
     embed_admin.add_field(name='Карта: ', value=cardname, inline=False)
     embed_admin.add_field(name='Старый баланс: ',
                           value=f'{old_balance} АР',
@@ -657,10 +657,10 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
 
 
   else:
-    balance = balance - count
+    balance = balance - amount
 
     cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{inter.author.id}' AND cardname = '{cardname}'""")
-    cur.execute(f"""UPDATE fines SET count = {count_fine-count} WHERE discord_id = '{inter.author.id}' AND id = '{id}'""")
+    cur.execute(f"""UPDATE fines SET amount = {amount_fine-amount} WHERE discord_id = '{inter.author.id}' AND id = '{id}'""")
     conn.commit()
 
 
@@ -669,8 +669,8 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
       colour=0xe60082,
     )
     embed.add_field(name='Действие: ', value='Оплата штрафа', inline=False)
-    embed.add_field(name='Сумма штрафа', value=f'{count_fine}', inline=False)
-    embed.add_field(name='Оплачено: ', value=f'{count}', inline=False)
+    embed.add_field(name='Сумма штрафа', value=f'{amount_fine}', inline=False)
+    embed.add_field(name='Оплачено: ', value=f'{amount}', inline=False)
     embed.add_field(name='Карта: ', value=cardname, inline=False)
     embed.add_field(name='Старый баланс: ',
                           value=f'{old_balance} АР',
@@ -690,8 +690,8 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
     )
     embed_admin.add_field(name='Игрок: ', value=username, inline=False)
     embed_admin.add_field(name='Действие: ', value='Оплата штрафа', inline=False)
-    embed_admin.add_field(name='Сумма штрафа', value=f'{count_fine}', inline=False)
-    embed_admin.add_field(name='Оплачено: ', value=f'{count}', inline=False)
+    embed_admin.add_field(name='Сумма штрафа', value=f'{amount_fine}', inline=False)
+    embed_admin.add_field(name='Оплачено: ', value=f'{amount}', inline=False)
     embed_admin.add_field(name='Карта: ', value=cardname, inline=False)
     embed_admin.add_field(name='Старый баланс: ',
                           value=f'{old_balance} АР',
@@ -843,7 +843,7 @@ async def sqlconsole(inter, sqlcommand: str):
 @commands.has_any_role(1147225574499168367, 1144692417283506339)
 async def fine(inter, 
                username: str = commands.Param(description='Ник на кого будет выписан штраф'), 
-               count: int = commands.Param(description='Сумма штрафа', min_value = 1), 
+               amount: int = commands.Param(description='Сумма штрафа', min_value = 1), 
                description: str = commands.Param(description='Описание штрафа'), 
                autopay = commands.Param(description='Настройка авто-оплаты', choices={'True', 'False'})):
   
@@ -871,9 +871,9 @@ async def fine(inter,
     id = random.randint(10,99)
 
     cur.execute(f"""INSERT INTO fines
-                    (discord_id_moder, username_moder, discord_id, username, count, description, autopay, date, id)
+                    (discord_id_moder, username_moder, discord_id, username, amount, description, autopay, date, id)
                     VALUES
-                    ('{inter.author.id}', '{username_moder}', '{discord_id}', '{username}', '{count}', '{description}', '{autopay}', '{formatted_date}', {id})"""
+                    ('{inter.author.id}', '{username_moder}', '{discord_id}', '{username}', '{amount}', '{description}', '{autopay}', '{formatted_date}', {id})"""
     )
     conn.commit()
 
@@ -884,7 +884,7 @@ async def fine(inter,
 
 
     if autopay == 'True':
-        balance = balance - count
+        balance = balance - amount
         cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{inter.author.id}' AND carddefault = 'True'""")
         if balance < 0:
             cur.execute(f"""UPDATE users SET use_all = 'False' WHERE discord_id = '{inter.author.id}'""")
@@ -910,7 +910,7 @@ async def fine(inter,
                     value=description,
                     inline=False)
     embed.add_field(name='ID: ', value=id, inline=False)
-    embed.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
+    embed.add_field(name='Сумма штрафа: ', value=f'{amount} АР', inline=False)
     embed.add_field(name='Авто-Оплата: ', value=f'{autopay_embed}', inline=False)
     embed.add_field(name='Старый баланс: ',
                     value=f'{old_balance} АР',
@@ -941,7 +941,7 @@ async def fine(inter,
                     value=description,
                     inline=False)
     embed_admin.add_field(name='ID: ', value=id, inline=False)
-    embed_admin.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
+    embed_admin.add_field(name='Сумма штрафа: ', value=f'{amount} АР', inline=False)
     embed_admin.add_field(name='Старый баланс: ',
                     value=f'{old_balance} АР',
                     inline=False)
@@ -997,15 +997,15 @@ async def fines_admin(inter, username = commands.Param(description='Ник иг�
   for row in result:
     fmt = "{0}"
     cur.execute(
-        f"""SELECT count FROM fines WHERE username = '{username}' AND description = '{fmt.format(*row)}'"""
+        f"""SELECT amount FROM fines WHERE username = '{username}' AND description = '{fmt.format(*row)}'"""
     )
-    count = cur.fetchone()
+    amount = cur.fetchone()
     cur.execute(
         f"""SELECT id FROM fines WHERE username = '{username}' AND description = '{fmt.format(*row)}'"""
     )
     id = cur.fetchone()[0]
     embed.add_field(name=fmt.format(*row), value='', inline=True)
-    embed.add_field(name=f'{fmt.format(*count)} АР', value='')
+    embed.add_field(name=f'{fmt.format(*amount)} АР', value='')
     embed.add_field(name=id, value='')
     embed.add_field(name='', value='', inline=False)
 
