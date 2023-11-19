@@ -1,0 +1,36 @@
+main:
+  # Токен бота
+  token: YOUR TOKEN HERE
+
+  # Во что бот играет
+  game_activity: GAME ACTIVITY
+
+db:
+  host: HOST
+  user: USER
+  password: PASSWORD
+  db: DB
+  port: PORT
+
+channels:
+  # Создание карты
+  create_card_channel: CHANNEL
+
+  # Переводы
+  transfer_channel: CHANNEL
+
+  # Изменение карты по умолчанию
+  set_default_channel: CHANNEL
+
+  # Изменение баланса
+  balance_channel: CHANNEL
+
+  # Штрафы
+  fine_channel: CHANNEL
+
+  # Запуск бота
+  start_channel: CHANNEL
+
+  # Клановые карты
+  clan_user_channel: CHANNEL
+
