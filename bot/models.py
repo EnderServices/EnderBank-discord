@@ -7,7 +7,7 @@ import os
 
 
 # Загрузка файл конфига
-config_path = os.path.join(os.getcwd(), 'OpenSource/config.yaml')
+config_path = os.path.join(os.getcwd(), 'config.yaml')
 with open(config_path, encoding='utf-8') as f:
     data = yaml.safe_load(f)
     
