@@ -28,12 +28,21 @@ bot = commands.Bot(command_prefix='!',
 
 
 # Инициализация базы данных
-def db_conn():
-  conn = mc.connect(
-      host=data['db']['host'],
-      user=data['db']['user'],
-      password=data['db']['password'],
-      db=data['db']['db'],
-      port=data['db']['port'])
-  cur = conn.cursor()
-  return conn, cur
+async def db_conn():
+    try:
+        conn = mc.connect(
+            host=data['db']['host'],
+            user=data['db']['user'],
+            password=data['db']['password'],
+            db=data['db']['db'],
+            port=data['db']['port'],
+            auth_plugin='mysql_native_password')
+        cur = conn.cursor()
+    except mc.Error as e:
+        logging.error(f'Ошибка подключения к базе данных\nError: {e}')
+        
+        user = bot.get_user(data['main']['owner'])
+        await user.send(f'Ошибка подключения к базе данных\nError: {e}')
+        
+        raise ConnectionError('Произошла ошибка при подключении к базе данных. Повторите попытку позже') from e
+    return conn, cur
