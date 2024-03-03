@@ -4,6 +4,7 @@ from disnake.ext import commands
 import mysql.connector as mc
 import yaml
 import os
+import logging
 
 
 # Загрузка файл конфига
@@ -11,6 +12,13 @@ config_path = os.path.join(os.getcwd(), 'config.yaml')
 with open(config_path, encoding='utf-8') as f:
     data = yaml.safe_load(f)
     
+# Параметры логирования   
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s\n\n",
+    filename="log_file.txt",
+    filemode="w",
+)
     
 # Инициализация бота
 bot = commands.Bot(command_prefix='!',

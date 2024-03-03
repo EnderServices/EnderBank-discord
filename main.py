@@ -21,7 +21,11 @@ async def on_ready():
       Fore.RED + now.strftime("%Y-%m-%d %H:%M:%S") + ': ' + Fore.GREEN +
       f"Bot {bot.user} is ready to work" + Style.RESET_ALL)
   channel = bot.get_channel(start_channel)  # канал логов
+  logging.info('Бот запущен')
   await channel.send(now.strftime("%Y-%m-%d %H:%M:%S") + ': ' + 'Бот успешно запущен')
+  
+  
+
 
 
 
@@ -33,7 +37,11 @@ async def create_card(inter,
                       cardname=commands.Param(description='Название карты')):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
   
   try:
     cur.execute(f"""SELECT use_all FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
@@ -112,7 +120,11 @@ async def create_card(inter,
 async def cards(inter):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
 
   try:
     cur.execute(f"""SELECT balance FROM users WHERE discord_id = '{inter.author.id}' AND carddefault = 'True'""")
@@ -177,7 +189,11 @@ async def transfer(
     description=commands.Param(description='Сообщение')):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
   
   try:
     cur.execute(f"""SELECT use_all FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
@@ -507,7 +523,11 @@ async def swap(inter,
                                            min_value=1)):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
   
   try:
     if card_1 == 'government' or card_2 == 'government':
@@ -646,7 +666,11 @@ async def set_default(
     )):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
   
   try:
     cur.execute(f"""SELECT use_all FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
@@ -715,7 +739,11 @@ async def set_default(
 )
 async def fines(inter):
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
 
   try:
     cur.execute(
@@ -758,7 +786,11 @@ async def fines(inter):
 )
 async def pay(inter, id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99), count: int = commands.Param(description='Сколько хотиите оплатить', min_value = 1), cardname = commands.Param(description='Карта с которой хотите произвести оплату')):
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+      await inter.send(e)
+      return
 
   try:
     cur.execute(f"""SELECT balance FROM users WHERE discord_id = '{inter.author.id}' AND cardname = '{cardname}'""")
@@ -887,7 +919,11 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
 )
 async def stats(inter):
     await inter.response.defer()
-    conn, cur = db_conn()
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
     
     try:
         cur.execute("""SELECT username, balance FROM users ORDER BY users.balance DESC LIMIT 3""")
@@ -912,21 +948,26 @@ async def stats(inter):
     cur.close()
     conn.close()
 
-  
-  
+
+
+
 # Админская часть
 admins = []
 for id in data['main']['admins']:
-    admins.append(str(id))
+    admins.append(id)
     
 
 # Изменение баланса
 @bot.slash_command(name='set_balance')
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def set_balance(inter, user_mc, cardname, balance):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+    await inter.send(e)
+    return
   
   try:
     cur.execute(
@@ -958,6 +999,7 @@ async def set_balance(inter, user_mc, cardname, balance):
     channel = bot.get_channel(balance_channel)  # канал логов
 
     await channel.send(embed=embed_admin)
+    logging.warning(f'Игрок {inter.author.nick} изменил баланс игроку {user_mc}')
     await inter.send('Баланс обновлен')
     cur.close()
     conn.close()
@@ -967,11 +1009,15 @@ async def set_balance(inter, user_mc, cardname, balance):
   
 # Список карт
 @bot.slash_command(name='cards_admin', description='Список карт и их баланс')
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def cards_admin(inter, username):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+    await inter.send(e)
+    return
   
   try:
     cur.execute(f"""SELECT cardname FROM users WHERE username = '{username}'""")
@@ -1008,17 +1054,22 @@ async def cards_admin(inter, username):
   
 # SQL
 @bot.slash_command(name='sql_console')
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def sqlconsole(inter, sqlcommand: str):
 
   await inter.response.defer()
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+    await inter.send(e)
+    return
   
   try:
     cur.execute(f"{sqlcommand}")
     conn.commit()
     cur.close()
     conn.close()
+    logging.warning(f'Игрок {inter.author.nick} использовал команду /SQL:\n{sqlcommand}')
     await inter.send(f'Выполнена команда: {sqlcommand}')
   except mc.Error as e:
         await inter.send(f'** Error: ** {e}')
@@ -1029,7 +1080,7 @@ async def sqlconsole(inter, sqlcommand: str):
   name='fine',
   description='Выписать штраф'
 )
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def fine(inter, 
                username: str = commands.Param(description='Ник на кого будет выписан штраф'), 
                count: int = commands.Param(description='Сумма штрафа', min_value = 1), 
@@ -1037,7 +1088,11 @@ async def fine(inter,
                autopay = commands.Param(description='Настройка авто-оплаты', choices={'True', 'False'})):
   
     await inter.response.defer()
-    conn, cur = db_conn()
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
     
     try:
         now = datetime.datetime.now()
@@ -1049,7 +1104,14 @@ async def fine(inter,
 
         cur.execute(f"""SELECT discord_id FROM users WHERE username = '{username}' LIMIT 0, 1""")
 
-        discord_id = cur.fetchone()[0]
+        discord_id = cur.fetchone()
+        if discord_id == None:
+            await inter.send('Игрок не найден')
+            cur.close()
+            conn.close()
+            return
+        else:
+            discord_id = discord_id[0]
 
         id = random.randint(10,99)
 
@@ -1077,75 +1139,81 @@ async def fine(inter,
             if balance < 0:
                 cur.execute(f"""UPDATE users SET use_all = 'False' WHERE discord_id = '{inter.author.id}'""")
 
-
-        if autopay == 'True':
-            autopay_embed = 'Включена'
-        else:
-            autopay_embed = 'Выключена'
-
-        embed = disnake.Embed(
-            title="Информация",
-            colour=0xe60082,
-        )
-        embed.add_field(name='Вам выписан штраф: ',
-                        value='',
-                        inline=False)
-        embed.add_field(name='От кого: ', value=username_moder, inline=False)
-        embed.add_field(name='Кому: ',
-                        value=username,
-                        inline=False)
-        embed.add_field(name='Причина: ',
-                        value=description,
-                        inline=False)
-        embed.add_field(name='ID: ', value=id, inline=False)
-        embed.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
-        embed.add_field(name='Авто-Оплата: ', value=f'{autopay_embed}', inline=False)
-        embed.add_field(name='Старый баланс: ',
-                        value=f'{old_balance} АР',
-                        inline=False)
-        embed.add_field(name='Новый баланс: ',
-                        value=f'{balance} АР',
-                        inline=False)
-
-        user = await bot.fetch_user(discord_id)
-
-        await user.send(embed=embed)
+    except Exception.Error as e:
+        await inter.send(f'** Error: ** {e}')
         
-        if autopay == 'True':
-            await user.send('Штраф оплачен автоматически')
+        
+    if autopay == 'True':
+        autopay_embed = 'Включена'
+    else:
+        autopay_embed = 'Выключена'
 
-        embed_admin = disnake.Embed(
-        title="Информация для администрации",
-        colour=0xf20000,
-        )
-        embed_admin.add_field(name='Действие: ',
-                        value='Создание штрафа',
-                        inline=False)
-        embed_admin.add_field(name='От кого: ', value=username_moder, inline=False)
-        embed_admin.add_field(name='Кому: ',
-                        value=username,
-                        inline=False)
-        embed_admin.add_field(name='Причина: ',
-                        value=description,
-                        inline=False)
-        embed_admin.add_field(name='ID: ', value=id, inline=False)
-        embed_admin.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
-        embed_admin.add_field(name='Старый баланс: ',
-                        value=f'{old_balance} АР',
-                        inline=False)
-        embed_admin.add_field(name='Новый баланс: ',
-                        value=f'{balance} АР',
-                        inline=False)
+    embed = disnake.Embed(
+        title="Информация",
+        colour=0xe60082,
+    )
+    embed.add_field(name='Вам выписан штраф: ',
+                    value='',
+                    inline=False)
+    embed.add_field(name='От кого: ', value=username_moder, inline=False)
+    embed.add_field(name='Кому: ',
+                    value=username,
+                    inline=False)
+    embed.add_field(name='Причина: ',
+                    value=description,
+                    inline=False)
+    embed.add_field(name='ID: ', value=id, inline=False)
+    embed.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
+    embed.add_field(name='Авто-Оплата: ', value=f'{autopay_embed}', inline=False)
+    embed.add_field(name='Старый баланс: ',
+                    value=f'{old_balance} АР',
+                    inline=False)
+    embed.add_field(name='Новый баланс: ',
+                    value=f'{balance} АР',
+                    inline=False)
 
-        channel = bot.get_channel(fine_channel)  # канал логов
+    user = await bot.fetch_user(discord_id)
 
-        await channel.send(embed=embed_admin)
+    await user.send(embed=embed)
+    
+    if autopay == 'True':
+        await user.send('Штраф оплачен автоматически')
 
+    embed_admin = disnake.Embed(
+    title="Информация для администрации",
+    colour=0xf20000,
+    )
+    embed_admin.add_field(name='Действие: ',
+                    value='Создание штрафа',
+                    inline=False)
+    embed_admin.add_field(name='От кого: ', value=username_moder, inline=False)
+    embed_admin.add_field(name='Кому: ',
+                    value=username,
+                    inline=False)
+    embed_admin.add_field(name='Причина: ',
+                    value=description,
+                    inline=False)
+    embed_admin.add_field(name='ID: ', value=id, inline=False)
+    embed_admin.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
+    embed_admin.add_field(name='Старый баланс: ',
+                    value=f'{old_balance} АР',
+                    inline=False)
+    embed_admin.add_field(name='Новый баланс: ',
+                    value=f'{balance} АР',
+                    inline=False)
 
+    channel = bot.get_channel(fine_channel)  # канал логов
+
+    logging.warning(f'Игрок {inter.author.nick} создал штраф ({id}) для игрока {username}')
+    await channel.send(embed=embed_admin)
+
+    try:
         if autopay == 'True':
             cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{discord_id}' AND carddefault = 'True'""")
             cur.execute(f"""DELETE FROM fines WHERE discord_id = '{discord_id}' AND id = {id}""")
             conn.commit()
+            
+            logging.warning(f'Штраф ({id}) игрока {username} был оплачен автоматически (Autopay)')
             await channel.send(f'{username} оплатил штраф с причиной {description}')
         else:
             await user.send('Скорее оплатите штраф!')
@@ -1153,7 +1221,7 @@ async def fine(inter,
             conn.close()
 
         await inter.send(f'Штраф выписан\nID: {id}')
-    except mc.Error as e:
+    except Exception.Error as e:
         await inter.send(f'** Error: ** {e}')
 
 
@@ -1162,12 +1230,16 @@ async def fine(inter,
     name='fines_admin',
     description='Посмотреть список штрафов игрока'
 )
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def fines_admin(inter, 
                       username = commands.Param(description='Ник игрока')
                     ):
     await inter.response.defer()
-    conn, cur = db_conn()
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
     
     try:
         cur.execute(
@@ -1208,12 +1280,35 @@ async def fines_admin(inter,
   name='unfine',
   description='Удалить штраф'
 )
-@commands.has_any_role(admins) 
+@commands.has_any_role(*admins) 
 async def unfine(inter, 
                  username = commands.Param(description='Ник игрока'), 
                  id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99)
                 ):
-  conn, cur = db_conn()
+  try:
+    conn, cur = await db_conn()
+  except ConnectionError as e:
+    await inter.send(e)
+    return
+  
+  try:
+    cur.execute(f"""SELECT username FROM fines WHERE id = {id} LIMIT 0,1""")
+    username_check = cur.fetchone()
+  except mc.Error as e:
+    await inter.send(f'** Error: ** {e}')
+    
+
+  if username_check == None:
+    await inter.send('Неверный ID штрафа или ник')
+    cur.close()
+    conn.close()
+    return
+  else:
+    if username_check[0] != username:
+        await inter.send('Неверный ID штрафа или ник')
+        cur.close()
+        conn.close()
+        return
   
   try:
     cur.execute(f"""DELETE FROM fines WHERE username = '{username}' AND id = {id}""")
@@ -1259,7 +1354,8 @@ async def unfine(inter,
     embed_admin.add_field(name='ID: ', value=id, inline=False)
 
     channel = bot.get_channel(fine_channel)  # канал логов
-
+    
+    logging.warning(f'Игрок {inter.author.nick} убрал штраф ({id}) у игрока {username}')
     await channel.send(embed=embed_admin)
     
     cur.close()
@@ -1273,8 +1369,9 @@ async def unfine(inter,
     name='restart',
     description='Перезапуск бота | использовать только в крайнем случае'
 )
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def restart(inter):
+    logging.warning(f'Игрок {inter.author.nick} использовал команду /restart')
     await inter.send('Перезагрузка...')
 
     python = sys.executable
@@ -1286,9 +1383,13 @@ async def restart(inter):
     name='government_add',
     description='Добавить в правительство'
 )
-@commands.has_any_role(admins)
+@commands.has_any_role(*admins)
 async def government_add(inter, username):
-    conn, cur = db_conn()
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
     
     try:
         cur.execute(f"""SELECT discord_id FROM users WHERE username='{username}' LIMIT 0, 1""")
@@ -1313,12 +1414,29 @@ async def government_add(inter, username):
                             ('{discord_id}', '{discord_name}', '{username}', '{balance}')"""
             )
             conn.commit()
-
+            logging.warning(f'Выдан доступ к гос. карте игроку {username}')
             await inter.send(f'Игроку с ником `{username}` выдан доступ к государственной карте')
     except mc.Error as e:
             await inter.send(f'** Error: ** {e}')
 
 
-  
+# Отправка логов
+@bot.slash_command(
+    name='debug',
+    description='Получить файл с логами'
+)
+@commands.has_any_role(*admins)
+async def debug(inter):
+    await inter.send(file=disnake.File('log_file.txt'), ephemeral=True)
+
+
+
+@bot.listen()
+async def on_slash_command_error(inter, error):
+    await inter.send("Недостаточно прав!")
+
+
+
+
 # Запуск бота
 bot.run(data['main']['token'])
