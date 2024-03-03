@@ -6,6 +6,7 @@ from typing import Optional
 import datetime
 import random
 from colorama import Fore, Style
+import sys
 
 from bot.models import *
 from bot.messages import *
@@ -714,14 +715,8 @@ async def set_default(
 )
 async def fines(inter):
   await inter.response.defer()
+  conn, cur = db_conn()
 
-  conn = mc.connect(
-      host='db.worldhosts.fun',  # создание курсора
-      user='u4980_7K91YKi39n',
-      password='=dgsI.+5R1!Aal=pozVfwcSD',
-      db='s4980_BankDB',
-      port=3306)
-  cur = conn.cursor()
   try:
     cur.execute(
         f"""SELECT description FROM fines WHERE discord_id = '{inter.author.id}'""")
@@ -762,13 +757,9 @@ async def fines(inter):
     description='Оплатить штраф'
 )
 async def pay(inter, id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99), count: int = commands.Param(description='Сколько хотиите оплатить', min_value = 1), cardname = commands.Param(description='Карта с которой хотите произвести оплату')):
-  conn = mc.connect(
-      host='db.worldhosts.fun',  # создание курсора
-      user='u4980_7K91YKi39n',
-      password='=dgsI.+5R1!Aal=pozVfwcSD',
-      db='s4980_BankDB',
-      port=3306)
-  cur = conn.cursor()
+  await inter.response.defer()
+  conn, cur = db_conn()
+
   try:
     cur.execute(f"""SELECT balance FROM users WHERE discord_id = '{inter.author.id}' AND cardname = '{cardname}'""")
     balance = int(cur.fetchone()[0])
@@ -890,14 +881,444 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
         
         
 # Статистика
+@bot.slash_command(
+        name='stats',
+        description='Выводит топ игроков по балансу'
+)
+async def stats(inter):
+    await inter.response.defer()
+    conn, cur = db_conn()
+    
+    try:
+        cur.execute("""SELECT username, balance FROM users ORDER BY users.balance DESC LIMIT 3""")
+        result = cur.fetchall()
+    except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+
+    embed = disnake.Embed(
+        title="Информация",
+        colour=0xe60082,
+    )
+    embed.add_field(name='Игрок', value='', inline=True)
+    embed.add_field(name='Баланс', value='')
+    embed.add_field(name='', value='', inline=False)
+    for rows in result:
+        username = rows[0]
+        if '_' in username:
+            username = '\\'+username
+        embed.add_field(name=username, value='', inline=True)
+        embed.add_field(name=rows[1], value='', inline=False)
+    await inter.send(embed=embed)
+    cur.close()
+    conn.close()
+
+  
+  
+# Админская часть
+admins = []
+for id in data['main']['admins']:
+    admins.append(str(id))
+    
+
+# Изменение баланса
+@bot.slash_command(name='set_balance')
+@commands.has_any_role(admins)
+async def set_balance(inter, user_mc, cardname, balance):
+
+  await inter.response.defer()
+  conn, cur = db_conn()
+  
+  try:
+    cur.execute(
+        f"""SELECT balance FROM users WHERE username = '{user_mc}' AND cardname = '{cardname}'"""
+    )
+    old_balance = int(cur.fetchone()[0])
+
+    cur.execute(f"""UPDATE users 
+                    SET balance = {balance}
+                    WHERE username = '{user_mc}' AND cardname = '{cardname}'""")
+    conn.commit()
+
+    embed_admin = disnake.Embed(
+        title="Информация для администрации",
+        colour=0xf20000,
+    )
+    embed_admin.add_field(name='Игрок: ', value=user_mc)
+    embed_admin.add_field(name='Действие: ',
+                            value='Изменение баланса',
+                            inline=False)
+    embed_admin.add_field(name='Карта: ', value=cardname, inline=False)
+    embed_admin.add_field(name='Старый баланс: ',
+                            value=f'{old_balance} АР',
+                            inline=False)
+    embed_admin.add_field(name='Новый баланс: ',
+                            value=f'{balance} АР',
+                            inline=False)
+
+    channel = bot.get_channel(balance_channel)  # канал логов
+
+    await channel.send(embed=embed_admin)
+    await inter.send('Баланс обновлен')
+    cur.close()
+    conn.close()
+  except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+  
+  
+# Список карт
+@bot.slash_command(name='cards_admin', description='Список карт и их баланс')
+@commands.has_any_role(admins)
+async def cards_admin(inter, username):
+
+  await inter.response.defer()
+  conn, cur = db_conn()
+  
+  try:
+    cur.execute(f"""SELECT cardname FROM users WHERE username = '{username}'""")
+    result = cur.fetchall()
+    embed = disnake.Embed(
+        title="Информация",
+        colour=0xe60082,
+    )
+    embed.add_field(name='Карта', value='', inline=True)
+    embed.add_field(name='Баланс', value='')
+    embed.add_field(name='', value='', inline=False)
+    for row in result:
+        fmt = "{0}"
+        cur.execute(
+            f"""SELECT balance FROM users WHERE username = '{username}' AND cardname = '{fmt.format(*row)}'"""
+        )
+        balance = cur.fetchone()
+
+        cur.execute(
+            f"""SELECT carddefault FROM users WHERE username = '{username}' AND cardname = '{fmt.format(*row)}'"""
+        )
+        carddefault = cur.fetchone()
+        embed.add_field(name=fmt.format(*row), value='', inline=True)
+        embed.add_field(name=f'{fmt.format(*balance)} АР', value='')
+        embed.add_field(name=fmt.format(*carddefault), value='')
+        embed.add_field(name='', value='', inline=False)
+
+    await inter.send(embed=embed)
+    cur.close()
+    conn.close()
+  except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+  
+  
+# SQL
+@bot.slash_command(name='sql_console')
+@commands.has_any_role(admins)
+async def sqlconsole(inter, sqlcommand: str):
+
+  await inter.response.defer()
+  conn, cur = db_conn()
+  
+  try:
+    cur.execute(f"{sqlcommand}")
+    conn.commit()
+    cur.close()
+    conn.close()
+    await inter.send(f'Выполнена команда: {sqlcommand}')
+  except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+  
+  
+# Выписать штраф
+@bot.slash_command(
+  name='fine',
+  description='Выписать штраф'
+)
+@commands.has_any_role(admins)
+async def fine(inter, 
+               username: str = commands.Param(description='Ник на кого будет выписан штраф'), 
+               count: int = commands.Param(description='Сумма штрафа', min_value = 1), 
+               description: str = commands.Param(description='Описание штрафа'), 
+               autopay = commands.Param(description='Настройка авто-оплаты', choices={'True', 'False'})):
+  
+    await inter.response.defer()
+    conn, cur = db_conn()
+    
+    try:
+        now = datetime.datetime.now()
+        formatted_date = now.strftime('%Y-%m-%d %H:%M:%S')
+        
+        cur.execute(f"""SELECT username FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+
+        username_moder = cur.fetchone()[0]
+
+        cur.execute(f"""SELECT discord_id FROM users WHERE username = '{username}' LIMIT 0, 1""")
+
+        discord_id = cur.fetchone()[0]
+
+        id = random.randint(10,99)
+
+        cur.execute(f"""INSERT INTO fines
+                        (discord_id_moder, username_moder, discord_id, username, count, description, autopay, date, id)
+                        VALUES
+                        ('{inter.author.id}', '{username_moder}', '{discord_id}', '{username}', '{count}', '{description}', '{autopay}', '{formatted_date}', {id})"""
+        )
+        conn.commit()
+
+        cur.execute(f"""SELECT balance FROM users WHERE discord_id = '{discord_id}' AND carddefault = 'True'""")
+
+        balance = int(cur.fetchone()[0])
+        old_balance = balance
 
 
+        if autopay == 'True':
+            balance = balance - count
+            cur.execute("""SELECT balance FROM government LIMIT 1""")
+            gov_balance = int(cur.fetchone()[0])
+            gov_balance = gov_balance + count
+            cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{inter.author.id}' AND carddefault = 'True'""")
+            cur.execute(f"""UPDATE government SET balance = {gov_balance}""")
+            conn.commit()
+            if balance < 0:
+                cur.execute(f"""UPDATE users SET use_all = 'False' WHERE discord_id = '{inter.author.id}'""")
+
+
+        if autopay == 'True':
+            autopay_embed = 'Включена'
+        else:
+            autopay_embed = 'Выключена'
+
+        embed = disnake.Embed(
+            title="Информация",
+            colour=0xe60082,
+        )
+        embed.add_field(name='Вам выписан штраф: ',
+                        value='',
+                        inline=False)
+        embed.add_field(name='От кого: ', value=username_moder, inline=False)
+        embed.add_field(name='Кому: ',
+                        value=username,
+                        inline=False)
+        embed.add_field(name='Причина: ',
+                        value=description,
+                        inline=False)
+        embed.add_field(name='ID: ', value=id, inline=False)
+        embed.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
+        embed.add_field(name='Авто-Оплата: ', value=f'{autopay_embed}', inline=False)
+        embed.add_field(name='Старый баланс: ',
+                        value=f'{old_balance} АР',
+                        inline=False)
+        embed.add_field(name='Новый баланс: ',
+                        value=f'{balance} АР',
+                        inline=False)
+
+        user = await bot.fetch_user(discord_id)
+
+        await user.send(embed=embed)
+        
+        if autopay == 'True':
+            await user.send('Штраф оплачен автоматически')
+
+        embed_admin = disnake.Embed(
+        title="Информация для администрации",
+        colour=0xf20000,
+        )
+        embed_admin.add_field(name='Действие: ',
+                        value='Создание штрафа',
+                        inline=False)
+        embed_admin.add_field(name='От кого: ', value=username_moder, inline=False)
+        embed_admin.add_field(name='Кому: ',
+                        value=username,
+                        inline=False)
+        embed_admin.add_field(name='Причина: ',
+                        value=description,
+                        inline=False)
+        embed_admin.add_field(name='ID: ', value=id, inline=False)
+        embed_admin.add_field(name='Сумма штрафа: ', value=f'{count} АР', inline=False)
+        embed_admin.add_field(name='Старый баланс: ',
+                        value=f'{old_balance} АР',
+                        inline=False)
+        embed_admin.add_field(name='Новый баланс: ',
+                        value=f'{balance} АР',
+                        inline=False)
+
+        channel = bot.get_channel(fine_channel)  # канал логов
+
+        await channel.send(embed=embed_admin)
+
+
+        if autopay == 'True':
+            cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{discord_id}' AND carddefault = 'True'""")
+            cur.execute(f"""DELETE FROM fines WHERE discord_id = '{discord_id}' AND id = {id}""")
+            conn.commit()
+            await channel.send(f'{username} оплатил штраф с причиной {description}')
+        else:
+            await user.send('Скорее оплатите штраф!')
+            cur.close()
+            conn.close()
+
+        await inter.send(f'Штраф выписан\nID: {id}')
+    except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+
+
+# Список штрафов у игрока
+@bot.slash_command(
+    name='fines_admin',
+    description='Посмотреть список штрафов игрока'
+)
+@commands.has_any_role(admins)
+async def fines_admin(inter, 
+                      username = commands.Param(description='Ник игрока')
+                    ):
+    await inter.response.defer()
+    conn, cur = db_conn()
+    
+    try:
+        cur.execute(
+            f"""SELECT description FROM fines WHERE username = '{username}'""")
+        result = cur.fetchall()
+        embed = disnake.Embed(
+            title="Информация",
+            colour=0xe60082,
+        )
+        embed.add_field(name='Описание', value='', inline=True)
+        embed.add_field(name='Сумма штрафа', value='')
+        embed.add_field(name='ID', value='')
+        embed.add_field(name='', value='', inline=False)
+        for row in result:
+            fmt = "{0}"
+            cur.execute(
+                f"""SELECT count FROM fines WHERE username = '{username}' AND description = '{fmt.format(*row)}'"""
+            )
+            count = cur.fetchone()
+            cur.execute(
+                f"""SELECT id FROM fines WHERE username = '{username}' AND description = '{fmt.format(*row)}'"""
+            )
+            id = cur.fetchone()[0]
+            embed.add_field(name=fmt.format(*row), value='', inline=True)
+            embed.add_field(name=f'{fmt.format(*count)} АР', value='')
+            embed.add_field(name=id, value='')
+            embed.add_field(name='', value='', inline=False)
+
+        await inter.send(embed=embed)
+        cur.close()
+        conn.close()
+    except mc.Error as e:
+            await inter.send(f'** Error: ** {e}')
+
+
+# Убрать штраф
+@bot.slash_command(
+  name='unfine',
+  description='Удалить штраф'
+)
+@commands.has_any_role(admins) 
+async def unfine(inter, 
+                 username = commands.Param(description='Ник игрока'), 
+                 id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99)
+                ):
+  conn, cur = db_conn()
   
+  try:
+    cur.execute(f"""DELETE FROM fines WHERE username = '{username}' AND id = {id}""")
+    cur.execute(f"""UPDATE users SET use_all = 'True' WHERE discord_id = '{inter.author.id}'""")
+    
+    conn.commit()
+
+    await inter.send(f'Удален штраф для игрока {username}\nID: {id}')
+    
+    cur.execute(f"""SELECT username FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+    username_moder = cur.fetchone()[0]
+    cur.execute(f"""SELECT discord_id FROM users WHERE username = '{username}' LIMIT 0, 1""")
+    discord_id = cur.fetchone()[0]
+
+    embed = disnake.Embed(
+        title="Информация",
+        colour=0xe60082,
+    )
+    embed.add_field(name='Действие: ',
+                    value='Удаление штрафа',
+                    inline=False)
+    embed.add_field(name='Кто: ', value=username_moder, inline=False)
+    embed.add_field(name='Кому: ',
+                    value=username,
+                    inline=False)
+    embed.add_field(name='ID: ', value=id, inline=False)
+
+    user = await bot.fetch_user(discord_id)
+
+    await user.send(embed=embed)
+
+    embed_admin = disnake.Embed(
+        title="Информация для администрации",
+        colour=0xf20000,
+    )
+    embed_admin.add_field(name='Действие: ',
+                    value='Удаление штрафа',
+                    inline=False)
+    embed_admin.add_field(name='Кто: ', value=username_moder, inline=False)
+    embed_admin.add_field(name='Кому: ',
+                    value=username,
+                    inline=False)
+    embed_admin.add_field(name='ID: ', value=id, inline=False)
+
+    channel = bot.get_channel(fine_channel)  # канал логов
+
+    await channel.send(embed=embed_admin)
+    
+    cur.close()
+    conn.close()
+  except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+
+
+# Перезапуск бота
+@bot.slash_command(
+    name='restart',
+    description='Перезапуск бота | использовать только в крайнем случае'
+)
+@commands.has_any_role(admins)
+async def restart(inter):
+    await inter.send('Перезагрузка...')
+
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
   
-  
-  
-  
-  
+
+# Дать доступ к государственной карте игроку
+@bot.slash_command(
+    name='government_add',
+    description='Добавить в правительство'
+)
+@commands.has_any_role(admins)
+async def government_add(inter, username):
+    conn, cur = db_conn()
+    
+    try:
+        cur.execute(f"""SELECT discord_id FROM users WHERE username='{username}' LIMIT 0, 1""")
+        discord_id = cur.fetchone()[0]
+        if discord_id == None:
+            await inter.send(f'Игрок с ником `{username}` не найден')
+        else:
+            cur.execute(f"""SELECT discord_name FROM users WHERE discord_id='{discord_id}' LIMIT 0, 1""")
+            discord_name = cur.fetchone()[0]
+            cur.execute(f"""SELECT username FROM users WHERE username = '{username}' LIMIT 0, 1""")
+            username = cur.fetchone()[0]
+            cur.execute(f"""SELECT balance FROM government LIMIT 0, 1""")
+            balance = cur.fetchone()
+
+            if balance is None:
+                balance = 0
+            else:
+                balance = balance[0]
+            cur.execute(f"""INSERT INTO government
+                            (discord_id, discord_name, username, balance)
+                            VALUES
+                            ('{discord_id}', '{discord_name}', '{username}', '{balance}')"""
+            )
+            conn.commit()
+
+            await inter.send(f'Игроку с ником `{username}` выдан доступ к государственной карте')
+    except mc.Error as e:
+            await inter.send(f'** Error: ** {e}')
+
+
   
 # Запуск бота
 bot.run(data['main']['token'])
