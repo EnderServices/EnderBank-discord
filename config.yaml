@@ -5,6 +5,10 @@ main:
   # Во что бот играет
   game_activity: GAME ACTIVITY
 
+  # ID роли или пользователя у которому хотите дать доступ к админским командам
+  admins:
+    - ROLE ID
+
 db:
   host: HOST
   user: USER
