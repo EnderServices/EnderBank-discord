@@ -79,33 +79,51 @@ python3 main.py
 ```
 /set_balance user_mc: Mag329 cardname: Карта мага balance: 10
 ```
+
 - `/cards_admin username: <Ник игрока>` - показать карты и баланс указанного игрока
 ```
 /cards_admin username: Mag329
 ```
+
 - `/sql_console sqlcommand: <SQL запрос>` - выполнить SQL запрос в базе данных
 ```
 /sql_console sqlcommand: DELETE FROM users WHERE username = "Mag329"
 ```
+
 - `/fine username: <Ник игрока> count: <Сумма штрафа> description: <Описание> autopay: <Авто оплата(True/False)>` - выписать штраф игроку
 ```
 /fine username: Mag329 count: 10 description: Просто так autopay: False
 ```
+
 - `/fines_admin username: <Ник игрока>` - список штрафов указанного игрока
 ```
 /fines_admin username: Mag329
 ```
+
 - `/unfine username: <Ник игрока> id: <ID штрафа>` - удалить штраф игрока
 ```
 /unfine username: Mag329 id: 50
 ```
+
 - `/restart` - перезапустить бота.
 - `/government_add username: <Ник игрока>` - выдать доступ к государственной карте
 ```
 /government_add username: Mag329
 ```
+
 - `/debug` - получить файл с логами бота
 
+
+## Описание механик
+### Авто-оплата
+Администратор который выдает штраф может указать значение для авто-оплаты True или False
+
+При значение True функция считается включенной, в этом случае с счета игрока которому выдали штраф будут автоматически списаны средства. Штраф не будет отображаться в команде `/fines`. Это единственный случай когда баланс может стать отрицательным. Если это произошло блокируются функции, такие как:
+- `/create_card`
+- `/transfer`
+- `/set_default`
+
+При значение False функция считается выключенной, в этом случае можно оплатить штраф через команду /pay, также штраф будет отображаться в `/fines`
 
 ## Логирование
 
