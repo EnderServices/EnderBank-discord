@@ -1,4 +1,4 @@
-MIT License
+Distributed under MIT License
 
 Copyright (c) 2023-2024 Mag329 Withors
 
