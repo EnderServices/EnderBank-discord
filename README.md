@@ -88,10 +88,22 @@ python3 main.py
 /sql_console sqlcommand: DELETE FROM users WHERE username = "Mag329"
 ```
 - `/fine username: <Ник игрока> count: <Сумма штрафа> description: <Описание> autopay: <Авто оплата(True/False)>` - выписать штраф игроку
-- `/fines_admin <ник_игрока>` - список штрафов указанного игрока
-- `/unfine <ник_игрока> <id_штрафа>` - удалить штраф игрока
+```
+/fine username: Mag329 count: 10 description: Просто так autopay: False
+```
+- `/fines_admin username: <Ник игрока>` - список штрафов указанного игрока
+```
+/fines_admin username: Mag329
+```
+- `/unfine username: <Ник игрока> id: <ID штрафа>` - удалить штраф игрока
+```
+/unfine username: Mag329 id: 50
+```
 - `/restart` - перезапустить бота.
-- `/government_add <ник_игрока>` - выдать доступ к государственной карте
+- `/government_add username: <Ник игрока>` - выдать доступ к государственной карте
+```
+/government_add username: Mag329
+```
 - `/debug` - получить файл с логами бота
 
 Подробное описание команд и их аргументов можно найти в исходном коде `main.py`.
