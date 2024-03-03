@@ -16,6 +16,12 @@ from bot.messages import *
 # Запуск бота
 @bot.event
 async def on_ready():
+  try:
+      await db_tables_check()
+  except ConnectionError as e:
+      print(e)
+      return
+    
   now = datetime.datetime.now()
   print(
       Fore.RED + now.strftime("%Y-%m-%d %H:%M:%S") + ': ' + Fore.GREEN +
@@ -1430,7 +1436,7 @@ async def debug(inter):
     await inter.send(file=disnake.File('log_file.txt'), ephemeral=True)
 
 
-
+# Обработка @commands.has_any_role(*admins)
 @bot.listen()
 async def on_slash_command_error(inter, error):
     await inter.send("Недостаточно прав!")

@@ -1,13 +1,19 @@
 main:
   # Токен бота
-  token: YOUR TOKEN HERE
+  token: TOKEN
 
   # Во что бот играет
   game_activity: GAME ACTIVITY
 
   # ID роли или пользователя которому хотите дать доступ к админским командам
   admins:
-    - ROLE ID
+    - USER_ID
+
+  # ID пользователя которому будут отправляться сообщения об ошибках
+  owner: USER_ID
+
+  # Отвечает за использование дополнения EMarket (влияет на бд)
+  use_market: true
 
 db:
   host: HOST
