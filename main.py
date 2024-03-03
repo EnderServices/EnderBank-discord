@@ -194,7 +194,7 @@ async def transfer(
         cur.execute(
                 f"""SELECT clan_cardname FROM clans WHERE clan_cardname = '{cardname}'"""
             ) # Ищем в БД карта клана равную cardname
-        sender = cur.fetchone()[0]
+        sender = cur.fetchone()
         
         if sender == None: # Если ответ из БД равен None, получаем карту 
             cur.execute(
@@ -206,6 +206,7 @@ async def transfer(
             else:
                 await inter.send('Карта не найдена')
         else:
+            sender = sender[0]
             sender_type = 'clan'
 
         cur.execute(
