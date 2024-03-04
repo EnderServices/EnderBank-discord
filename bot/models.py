@@ -54,8 +54,11 @@ async def db_tables_check():
         cur.execute("SHOW TABLES")
         tables = cur.fetchall()
         new_tables = []
+
         for table in tables:
-            table = table[0].decode("utf-8")
+            # if type(table) != list:
+                # table = table[0].decode("utf-8")
+            table = table[0]
             new_tables.append(table)
         tables = new_tables
         if not ('users' in tables):
@@ -70,7 +73,7 @@ async def db_tables_check():
                         `clancard` text CHARACTER SET utf8mb4 NOT NULL
                         ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
             """)
-        elif not ('clans') in tables:
+        if not ('clans') in tables:
             cur.execute("""CREATE TABLE `clans` (
                         `id` int(11) NOT NULL,
                         `discord_id_author` text CHARACTER SET utf8mb4 NOT NULL,
@@ -80,7 +83,7 @@ async def db_tables_check():
                         ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
             """)
         
-        elif not ('fines') in tables:
+        if not ('fines') in tables:
             cur.execute("""CREATE TABLE `fines` (
                         `id` int(11) NOT NULL,
                         `discord_id_moder` text CHARACTER SET utf8 NOT NULL,
@@ -94,7 +97,7 @@ async def db_tables_check():
                         ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
             """)
             
-        elif not ('government') in tables:
+        if not ('government') in tables:
             cur.execute("""CREATE TABLE `government` (
                         `id` int(11) NOT NULL,
                         `discord_id` text CHARACTER SET utf8 NOT NULL,
@@ -104,7 +107,7 @@ async def db_tables_check():
                         ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
             """)
             
-        elif data['main']['use_market'] == 'true':
+        if data['main']['use_market'] == True:
             if not ('market') in tables:
                 cur.execute("""CREATE TABLE `market` (
                             `discord_id` text CHARACTER SET utf8mb4 NOT NULL,

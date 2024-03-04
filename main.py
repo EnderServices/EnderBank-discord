@@ -1387,7 +1387,7 @@ async def restart(inter):
 # Дать доступ к государственной карте игроку
 @bot.slash_command(
     name='government_add',
-    description='Добавить в правительство'
+    description='Дать доступ к государственной карте'
 )
 @commands.has_any_role(*admins)
 async def government_add(inter, username):
