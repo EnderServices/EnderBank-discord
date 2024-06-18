@@ -99,7 +99,6 @@ async def db_tables_check():
             
         if not ('government') in tables:
             cur.execute("""CREATE TABLE `government` (
-                        `id` int(11) NOT NULL,
                         `discord_id` text CHARACTER SET utf8 NOT NULL,
                         `discord_name` text CHARACTER SET utf8mb4 NOT NULL,
                         `username` text CHARACTER SET utf8mb4 NOT NULL,

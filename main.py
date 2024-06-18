@@ -16,11 +16,11 @@ from bot.messages import *
 # Запуск бота
 @bot.event
 async def on_ready():
-  try:
-      await db_tables_check()
-  except ConnectionError as e:
-      print(e)
-      return
+#   try:
+#       await db_tables_check()
+#   except ConnectionError as e:
+#       print(e)
+#       return
     
   now = datetime.datetime.now()
   print(
@@ -1438,9 +1438,14 @@ async def debug(inter):
 
 # Обработка @commands.has_any_role(*admins)
 @bot.listen()
-async def on_slash_command_error(inter, error):
-    await inter.send("Недостаточно прав!")
-
+async def on_slash_command_error(ctx, error):
+    if isinstance(error, commands.MissingAnyRole):
+        await ctx.send("У вас нет прав на выполнение этой команды.")
+    elif isinstance(error, commands.CommandNotFound):
+        await ctx.send("Такой команды не существует.")
+    else:
+        await ctx.send(f"Произошла ошибка при выполнении команды")
+    
 
 
 
