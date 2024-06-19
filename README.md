@@ -73,6 +73,18 @@ python3 main.py
 
 - `/stats` - статистика топ игроков по балансу
 
+- `/clancard_create cardname: <Название карты клана>' - Создание карты для клана
+  ```
+  /clancard_create cardname: EnderBank
+  ```
+
+- '/clan_add username: <Ник игрока>' - Дать доступ другому игроку к карте клана
+  ```
+  /clan_add username: Withor_
+  ```
+
+- '/clan_card' - Информация о карте клана
+
 ### Команды администрации  
 
 - `/set_balance user_mc: <Ник игрока> cardname: <Название карты на которой изменить баланс> balance: <Новый баланс>` - изменить баланс карты игрока
