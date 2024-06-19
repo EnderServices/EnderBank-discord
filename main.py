@@ -957,6 +957,192 @@ async def stats(inter):
     conn.close()
 
 
+#----CLANCARD_CREATE----#
+@bot.slash_command(name='clancard_create', description='Создание карты для клана')
+async def clancard_create(inter, cardname = commands.Param(description='Название карты')):
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
+
+    await inter.response.defer()
+
+    try:
+        cur.execute(f"""SELECT clancard FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+        clancard = cur.fetchone()[0]
+        if clancard == 'null':
+            cur.execute(f"""SELECT username FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+            username = cur.fetchone()[0]
+
+            cur.execute(f"""UPDATE users SET clancard = '{cardname}' WHERE discord_id = '{inter.author.id}'""")
+            cur.execute(f"""INSERT INTO clans
+                                    (discord_id_author, username_author, clan_cardname, balance)
+                                    VALUES
+                                    ('{inter.author.id}', '{username}', '{cardname}', 0)""")
+            conn.commit()
+            channel = bot.get_channel(create_card_channel)  # канал логов
+            embed_admin = disnake.Embed(
+                title="Информация для администрации",
+                colour=0xf20000,
+            )
+            embed_admin.add_field(name='Действие: ',
+                                    value='Создание карты клана',
+                                    inline=False)
+            embed_admin.add_field(name='', value='', inline=False)
+            embed_admin.add_field(name='Disocrd ID: ',
+                                    value=f'{inter.author.id}',
+                                    inline=False)
+            embed_admin.add_field(name='Discord UserName: ',
+                                    value=f'{inter.author.name}',
+                                    inline=False)
+            embed_admin.add_field(name='Ник в Minecraft: ',
+                                    value=f'{username}',
+                                    inline=False)
+            embed_admin.add_field(name='Название карты: ',
+                                    value=f'{cardname}',
+                                    inline=False)
+            await channel.send(embed=embed_admin)
+
+            await inter.send(
+                f'Карта клана с названием {cardname} была успешно создана')
+        else:
+            await inter.send('Карта клана уже есть')
+    except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+
+    
+    cur.close()
+    conn.close()
+
+
+#----CLAN_ADD----#
+@bot.slash_command(name='clan_add', description='Дать доступ другому игроку к карте')
+async def clan_add(inter, username = commands.Param(description='Ник игрока которого хотите добавить')):
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
+
+    await inter.response.defer()
+
+    try:
+        cur.execute(f"""SELECT clancard FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+        clancard = cur.fetchone()[0]
+        if clancard == 'null':
+            await inter.send('У вас нет карты клана')
+        else:
+            cur.execute(f"""SELECT clancard FROM users WHERE username = '{username}' LIMIT 0, 1""")
+            clancard_user = cur.fetchone()[0]
+            if clancard_user != 'null':
+                await inter.send('У игрока уже есть карта клана')
+            else:
+                cardname = clancard
+                cur.execute(f"""UPDATE users SET clancard = '{cardname}' WHERE username = '{username}'""")
+                conn.commit()
+                channel = bot.get_channel(clan_user_channel)  # канал логов
+                embed_admin = disnake.Embed(
+                    title="Информация для администрации",
+                    colour=0xf20000,
+                )
+                embed_admin.add_field(name='Действие: ',
+                                        value='Добавление игрока в карту клана',
+                                        inline=False)
+                embed_admin.add_field(name='', value='', inline=False)
+                embed_admin.add_field(name='Добавил: ',
+                                        value=inter.author.display_name,
+                                        inline=False)
+                embed_admin.add_field(name='Кому: ',
+                                        value=f'{username}',
+                                        inline=False)
+                embed_admin.add_field(name='Название карты: ',
+                                        value=f'{cardname}',
+                                        inline=False)
+                await channel.send(embed=embed_admin)
+
+                await inter.send(f'Игроку {username} дан доступ к карте {cardname}')
+                
+                cur.execute(f"""SELECT discord_id FROM users WHERE username = '{username}' LIMIT 0, 1""")
+                user_discord_id = cur.fetchone()[0]
+                user = await bot.fetch_user(user_discord_id)
+                await user.send(f'Вам был выдан доступ к карте клана {cardname}')
+            conn.commit()
+    except mc.Error as e:
+        await inter.send(f'** Error: ** {e}')
+    cur.close()
+    conn.close()
+
+
+
+    #----CLAN_CARD----#
+@bot.slash_command(name='clan_card', description='Информация о карте клана')
+async def clan_card(inter):
+    await inter.response.defer()
+
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
+
+    try:
+        cur.execute(f"""SELECT clancard FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+        clancard = cur.fetchone()[0]
+        if clancard == 'null':
+            await inter.send('У вас нет карты клана')
+        else:
+            cur.execute(
+                f"""SELECT clancard FROM users WHERE discord_id = '{inter.author.id}' LIMIT 0, 1""")
+            clancard = cur.fetchone()[0]
+
+            cur.execute(
+                f"""SELECT COUNT(*) FROM users WHERE clancard = '{clancard}'""")
+            count = int(cur.fetchone()[0])
+            cur.execute(f"""SELECT balance FROM clans WHERE clan_cardname = '{clancard}'""")
+            balance = int(cur.fetchone()[0])
+    except mc.Error as e:
+        await inter.send(f' Error:  {e}')
+    embed = disnake.Embed(
+        title="Информация",
+        colour=0xe60082,
+    )
+    embed.add_field(name='Карта:', value=clancard, inline=True)
+    embed.add_field(name='Баланс', value=balance, inline=True)
+    embed.add_field(name='', value='', inline=False)
+    embed.add_field(name='Игроки', value='', inline=False)
+
+
+    try:
+        cur.execute(
+            f"""SELECT username FROM users WHERE clancard = '{clancard}'"""
+        )
+        users = cur.fetchall()
+
+        embed 
+        users_unique = []
+        for row in users:
+            username = row[0]
+            if username not in users_unique:
+                users_unique.append(username)
+
+        for username in users_unique:
+            embed.add_field(name='', value=username, inline=False)
+                
+
+    except mc.Error as e:
+        await inter.send(f' Error:  {e}')
+
+    # i = 0
+    # print(users[i])
+    # while i <= count:
+    #     embed.add_field(name=(users[i]), value='', inline=False)
+    #     embed.add_field(name='', value='', inline=False)
+    #     i = i +1
+    await inter.send(embed=embed)
+    cur.close()
+    conn.close()
+
 
 
 # Админская часть

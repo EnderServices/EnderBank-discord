@@ -75,7 +75,6 @@ async def db_tables_check():
             """)
         if not ('clans') in tables:
             cur.execute("""CREATE TABLE `clans` (
-                        `id` int(11) NOT NULL,
                         `discord_id_author` text CHARACTER SET utf8mb4 NOT NULL,
                         `username_author` text CHARACTER SET utf8mb4 NOT NULL,
                         `clan_cardname` text CHARACTER SET utf8mb4 NOT NULL,
