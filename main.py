@@ -1094,11 +1094,6 @@ async def fine(inter,
                autopay = commands.Param(description='Настройка авто-оплаты', choices={'True', 'False'})):
   
     await inter.response.defer()
-    try:
-        conn, cur = await db_conn()
-    except ConnectionError as e:
-        await inter.send(e)
-        return
     
     try:
         now = datetime.datetime.now()
@@ -1135,15 +1130,7 @@ async def fine(inter,
 
 
         if autopay == 'True':
-            balance = balance - count
-            cur.execute("""SELECT balance FROM government LIMIT 1""")
-            gov_balance = int(cur.fetchone()[0])
-            gov_balance = gov_balance + count
-            cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{inter.author.id}' AND carddefault = 'True'""")
-            cur.execute(f"""UPDATE government SET balance = {gov_balance}""")
-            conn.commit()
-            if balance < 0:
-                cur.execute(f"""UPDATE users SET use_all = 'False' WHERE discord_id = '{inter.author.id}'""")
+            
 
     except Exception.Error as e:
         await inter.send(f'** Error: ** {e}')
@@ -1215,7 +1202,15 @@ async def fine(inter,
 
     try:
         if autopay == 'True':
+            balance = balance - count
+            cur.execute("""SELECT balance FROM government LIMIT 1""")
+            gov_balance = int(cur.fetchone()[0])
+            gov_balance = gov_balance + count
             cur.execute(f"""UPDATE users SET balance = {balance} WHERE discord_id = '{discord_id}' AND carddefault = 'True'""")
+            cur.execute(f"""UPDATE government SET balance = {gov_balance}""")
+            conn.commit()
+            if balance < 0:
+                cur.execute(f"""UPDATE users SET use_all = 'False' WHERE discord_id = '{discord_id}'""")
             cur.execute(f"""DELETE FROM fines WHERE discord_id = '{discord_id}' AND id = {id}""")
             conn.commit()
             
