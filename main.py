@@ -144,12 +144,13 @@ async def cards(inter):
         conn.commit()
     except mc.Error as e:
         await inter.send(f'** Error: ** {e}')
-    try:
-        cur.execute(
-            f"""SELECT cardname FROM users WHERE discord_id = '{inter.author.id}'""")
-        result = cur.fetchall()
-    except mc.Error as e:
-        await inter.send(f'** Error: ** {e}')
+  try:
+    cur.execute(
+        f"""SELECT cardname FROM users WHERE discord_id = '{inter.author.id}'""")
+    result = cur.fetchall()
+  except mc.Error as e:
+    await inter.send(f'** Error: ** {e}')
+        
   embed = disnake.Embed(
       title="Информация",
       colour=0xe60082,
@@ -158,6 +159,7 @@ async def cards(inter):
   embed.add_field(name='Баланс', value='')
   embed.add_field(name='Карта по умолчанию', value='')
   embed.add_field(name='', value='', inline=False)
+  
   for row in result:
     fmt = "{0}"
     try:
