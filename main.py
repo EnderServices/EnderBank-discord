@@ -11,6 +11,20 @@ import sys
 from bot.models import *
 from bot.messages import *
 
+# Декоратор для работы бота только в ЛС
+def pm_only():
+    async def predicate(inter):
+        try:
+            if data['main']['private_message_only'] is True:
+                if inter.guild is not None:
+                    await inter.send('Эту команду можно использовать только в личных сообщениях.', ephemeral=True)
+                    return False
+                return True
+        except Exception as e:
+            await inter.send('Произошла ошибка при выполнении команды.', ephemeral=True)
+            return False
+    return commands.check(predicate)
+
 
 # ----ИВЕНТЫ---- #
 # Запуск бота
@@ -38,6 +52,7 @@ async def on_ready():
 # ----КОМАНДЫ---- #
 # Создание карты
 @bot.slash_command(name='create_card', description='Создание новой карты')
+@pm_only()
 async def create_card(inter,
                       user=commands.Param(description='Ник в Minecraft'),
                       cardname=commands.Param(description='Название карты')):
@@ -98,10 +113,10 @@ async def create_card(inter,
                             value='Создание карты',
                             inline=False)
     embed_admin.add_field(name='', value='', inline=False)
-    embed_admin.add_field(name='Disocrd ID: ',
+    embed_admin.add_field(name='Discord ID: ',
                             value=f'{inter.author.id}',
                             inline=False)
-    embed_admin.add_field(name='Discord UserName: ',
+    embed_admin.add_field(name='Discord username: ',
                             value=f'{inter.author.name}',
                             inline=False)
     embed_admin.add_field(name='Ник в Minecraft: ',
@@ -123,6 +138,7 @@ async def create_card(inter,
 
 # Список карт
 @bot.slash_command(name='cards', description='Список карт и их баланс')
+@pm_only()
 async def cards(inter):
 
   await inter.response.defer()
@@ -189,6 +205,7 @@ async def cards(inter):
 # Перевод
 @bot.slash_command(name='transfer',
                    description='Денежный перевод другому игроку')
+@pm_only()
 async def transfer(
     inter,
     user=commands.Param(description='Ник кому хотите перевести деньги'),
@@ -524,6 +541,7 @@ async def transfer(
 
 # Перевод между своими картами
 @bot.slash_command(name='swap', description='Перевод между счетами')
+@pm_only()
 async def swap(inter,
                card_1=commands.Param(description='Первый счет'),
                card_2=commands.Param(description='Второй счет'),
@@ -667,6 +685,7 @@ async def swap(inter,
 # Изменение карты по умолчанию
 @bot.slash_command(name='set_default',
                    description='Изменить карту по умолчанию')
+@pm_only()
 async def set_default(
     inter,
     card=commands.Param(
@@ -745,6 +764,7 @@ async def set_default(
     name='fines',
     description='Посмотреть список штрафов'
 )
+@pm_only()
 async def fines(inter):
   await inter.response.defer()
   try:
@@ -792,6 +812,7 @@ async def fines(inter):
     name='pay',
     description='Оплатить штраф'
 )
+@pm_only()
 async def pay(inter, id: int = commands.Param(description='ID штрафа', min_value = 10, max_value = 99), count: int = commands.Param(description='Сколько хотиите оплатить', min_value = 1), cardname = commands.Param(description='Карта с которой хотите произвести оплату')):
   await inter.response.defer()
   try:
@@ -925,6 +946,7 @@ async def pay(inter, id: int = commands.Param(description='ID штрафа', min
         name='stats',
         description='Выводит топ игроков по балансу'
 )
+@pm_only()
 async def stats(inter):
     await inter.response.defer()
     try:
@@ -957,8 +979,9 @@ async def stats(inter):
     conn.close()
 
 
-#----CLANCARD_CREATE----#
+# Создание карты клана
 @bot.slash_command(name='clancard_create', description='Создание карты для клана')
+@pm_only()
 async def clancard_create(inter, cardname = commands.Param(description='Название карты')):
     try:
         conn, cur = await db_conn()
@@ -1016,8 +1039,9 @@ async def clancard_create(inter, cardname = commands.Param(description='Назв
     conn.close()
 
 
-#----CLAN_ADD----#
+# Дать доступ другому игроку к карте
 @bot.slash_command(name='clan_add', description='Дать доступ другому игроку к карте')
+@pm_only()
 async def clan_add(inter, username = commands.Param(description='Ник игрока которого хотите добавить')):
     try:
         conn, cur = await db_conn()
@@ -1075,8 +1099,9 @@ async def clan_add(inter, username = commands.Param(description='Ник игро
 
 
 
-    #----CLAN_CARD----#
+# Информация о карте клана
 @bot.slash_command(name='clan_card', description='Информация о карте клана')
+@pm_only()
 async def clan_card(inter):
     await inter.response.defer()
 
@@ -1675,15 +1700,13 @@ async def debug(inter):
 
 # Обработка @commands.has_any_role(*admins)
 @bot.listen()
-async def on_slash_command_error(ctx, error):
+async def on_slash_command_error(inter, error):
     if isinstance(error, commands.MissingAnyRole):
-        await ctx.send("У вас нет прав на выполнение этой команды.")
+        await inter.send("У вас нет прав на выполнение этой команды.")
     elif isinstance(error, commands.CommandNotFound):
-        await ctx.send("Такой команды не существует.")
-    else:
-        await ctx.send(f"Произошла ошибка при выполнении команды")
-    
-
+        await inter.send("Такой команды не существует.")
+    # else:
+    #     await inter.send("Произошла ошибка при выполнении команды")
 
 
 # Запуск бота
