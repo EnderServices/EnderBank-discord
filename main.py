@@ -1094,6 +1094,11 @@ async def fine(inter,
                autopay = commands.Param(description='Настройка авто-оплаты', choices={'True', 'False'})):
   
     await inter.response.defer()
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
     
     try:
         now = datetime.datetime.now()
@@ -1127,9 +1132,6 @@ async def fine(inter,
 
         balance = int(cur.fetchone()[0])
         old_balance = balance
-
-
-        if autopay == 'True':
             
 
     except Exception.Error as e:
