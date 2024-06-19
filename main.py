@@ -82,14 +82,20 @@ async def create_card(inter,
         default = int(cur.fetchone()[0])
     except mc.Error as e:
            await inter.send(f'** Error: ** {e}')
-
+           
     if default >= 1:
         try:
-            cur.execute(f"""INSERT INTO users
-                                (discord_id, discord_name, username, cardname, balance, carddefault, use_all, clancard)
-                                VALUES
-                                ('{inter.author.id}', '{inter.author.name}', '{user}', '{cardname}', '0', 'False', 'True', 'null')"""
-                        )
+            cur.execute(f"""SELECT cardname FROM users WHERE cardname = '{cardname}' AND discord_id = '{inter.author.id}'""")
+            cardname_used = cur.fetchone()
+            if cardname_used is None:
+                cur.execute(f"""INSERT INTO users
+                                    (discord_id, discord_name, username, cardname, balance, carddefault, use_all, clancard)
+                                    VALUES
+                                    ('{inter.author.id}', '{inter.author.name}', '{user}', '{cardname}', '0', 'False', 'True', 'null')"""
+                            )
+            else:
+                await inter.send(f'Карта с таким названием уже существует')
+                return
         except mc.Error as e:
             await inter.send(f'** Error: ** {e}')
     else:

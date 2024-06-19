@@ -1,0 +1,7 @@
+.other/
+.venv/
+__pycache__/
+bot/__pycache__/
+config_.yaml
+config__.yaml
+log_file.txt
