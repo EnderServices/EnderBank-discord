@@ -1611,6 +1611,58 @@ async def government_add(inter, username):
             await inter.send(f'** Error: ** {e}')
 
 
+# Информация о гос карте
+@bot.slash_command(
+    name='government_card',
+    description='Информация о государственной карте'
+)
+@commands.has_any_role(*admins)
+async def government_card(inter):
+    try:
+        conn, cur = await db_conn()
+    except ConnectionError as e:
+        await inter.send(e)
+        return
+    try:
+        cur.execute(f"""SELECT balance FROM government LIMIT 1""")
+        balance = int(cur.fetchone()[0])
+    except mc.Error as e:
+        await inter.send(f' Error:  {e}')
+    embed = disnake.Embed(
+        title="Информация",
+        colour=0xe60082,
+    )
+    embed.add_field(name='Карта:', value='Государственная', inline=True)
+    embed.add_field(name='Баланс', value=balance, inline=True)
+    embed.add_field(name='', value='', inline=False)
+    embed.add_field(name='Игроки', value='', inline=False)
+
+
+    try:
+        cur.execute(
+            f"""SELECT username FROM government"""
+        )
+        users = cur.fetchall()
+
+        embed 
+        users_unique = []
+        for row in users:
+            username = row[0]
+            if username not in users_unique:
+                users_unique.append(username)
+
+        for username in users_unique:
+            embed.add_field(name='', value=username, inline=False)
+                
+
+    except mc.Error as e:
+        await inter.send(f' Error:  {e}')
+
+    await inter.send(embed=embed)
+    cur.close()
+    conn.close()
+
+
 # Отправка логов
 @bot.slash_command(
     name='debug',
