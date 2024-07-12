@@ -7,6 +7,7 @@ import datetime
 import random
 from colorama import Fore, Style
 import sys
+import json
 
 from bot.models import *
 from bot.messages import *
@@ -415,7 +416,55 @@ async def transfer(
                             cur.execute(f"""UPDATE users SET use_all = 'True' WHERE discord_id = '{user_recipient_id}'""")
                             conn.commit()
                     await user_recipient.send(embed=embed_recipient)
+                    
+                    # Insert transaction for sender
+                    transaction = json.dumps({
+                        "card": cardname,
+                        "old_balance_sender": old_balance_sender,
+                        "new_balance_sender": balance_sender,
+                        "username": user,
+                        "sender_username": username_sender,
+                        "old_balance_recipient": old_balance_recipient,
+                        "new_balance_recipient": balance_recipient,
+                        "amount": count,
+                        "description": description
+                    }, ensure_ascii=False)
 
+                    try:
+                        cur.execute(
+                            f"INSERT INTO transactions (discord_id, json, timestamp, type) VALUES (%s, %s, %s, %s)",
+                            (inter.author.id, transaction, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'transfer')
+                        )
+                        conn.commit()  # Ensure the transaction is committed to the database
+
+                    except mc.Error as e:
+                        await inter.send('Ошибка сохранения данных о транзакции')
+
+                    # Insert transaction for recipient
+                    cur.execute(f"""SELECT cardname FROM users WHERE carddefault='True' AND discord_id='{user_recipient_id}'""")
+                    recipient_cardname = cur.fetchone()[0]
+                    
+                    transaction = json.dumps({
+                        "card": recipient_cardname,
+                        "old_balance_sender": old_balance_sender,
+                        "new_balance_sender": balance_sender,
+                        "username": username_sender,
+                        "sender_username": username_sender,
+                        "old_balance_recipient": old_balance_recipient,
+                        "new_balance_recipient": balance_recipient,
+                        "amount": count,
+                        "description": description
+                    }, ensure_ascii=False)
+
+                    try:
+                        cur.execute(
+                            f"INSERT INTO transactions (discord_id, json, timestamp, type) VALUES (%s, %s, %s, %s)",
+                            (user_recipient_id, transaction, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'transfer')
+                        )
+                        conn.commit()  # Ensure the transaction is committed to the database
+                    except mc.Error as e:
+                        await inter.send('Ошибка сохранения данных о транзакции')
+                    
                 else:
                     await inter.send('Недостаточно средств')
                     cur.close()
@@ -534,6 +583,58 @@ async def transfer(
                         cur.execute(f"""UPDATE users SET use_all = 'True' WHERE discord_id = '{user_recipient_id}'""")
                         conn.commit()
                 await user_recipient.send(embed=embed_recipient)
+                
+                # Insert transaction for sender
+                transaction = json.dumps({
+                    "card": cardname,
+                    "old_balance_sender": old_balance_sender,
+                    "new_balance_sender": balance_sender,
+                    "username": user,
+                    "sender_username": username_sender,
+                    "old_balance_recipient": old_balance_recipient,
+                    "new_balance_recipient": balance_recipient,
+                    "amount": count,
+                    "description": description
+                }, ensure_ascii=False)
+
+
+                try:
+                    cur.execute(
+                        f"INSERT INTO transactions (discord_id, json, timestamp, type) VALUES (%s, %s, %s, %s)",
+                        (inter.author.id, transaction, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'transfer')
+                    )
+                    conn.commit()  # Ensure the transaction is committed to the database
+
+                except mc.Error as e:
+                    await inter.send('Ошибка сохранения данных о транзакции')
+
+                # Insert transaction for recipient
+                cur.execute(f"""SELECT cardname FROM users WHERE carddefault='True' AND discord_id='{user_recipient_id}'""")
+                recipient_cardname = cur.fetchone()[0]
+                
+                transaction = json.dumps({
+                    "card": recipient_cardname,
+                    "old_balance_sender": old_balance_sender,
+                    "new_balance_sender": balance_sender,
+                    "username": username_sender,
+                    "sender_username": username_sender,
+                    "old_balance_recipient": old_balance_recipient,
+                    "new_balance_recipient": balance_recipient,
+                    "amount": count,
+                    "description": description
+                }, ensure_ascii=False)
+
+
+                try:
+                    cur.execute(
+                        f"INSERT INTO transactions (discord_id, json, timestamp, type) VALUES (%s, %s, %s, %s)",
+                        (user_recipient_id, transaction, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'transfer')
+                    )
+                    conn.commit()  # Ensure the transaction is committed to the database
+
+                except mc.Error as e:
+                    await inter.send('Ошибка сохранения данных о транзакции')
+
 
             else:
                 await inter.send('Недостаточно средств')
@@ -678,8 +779,35 @@ async def swap(inter,
                             inline=False)
 
         channel = bot.get_channel(transfer_channel)  # канал логов
-
+        
         await channel.send(embed=embed_admin)
+        
+        if card_1 == 'government':
+            card_1 = 'Государственная'
+        if card_2 == 'government':
+            card_2 = 'Государственная'
+            
+        transaction = json.dumps({
+            "card1": card_1,
+            "old_balance_1": old_first_balance,
+            "new_balance_1": first_balance,
+            "card2": card_2,
+            "old_balance_2": old_second_balance,
+            "new_balance_2": second_balance,
+            "amount": count,
+        }, ensure_ascii=False)
+
+
+        try:
+            cur.execute(
+                f"INSERT INTO transactions (discord_id, json, timestamp, type) VALUES (%s, %s, %s, %s)",
+                (inter.author.id, transaction, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'swap')
+            )
+            conn.commit()  # Ensure the transaction is committed to the database
+
+        except mc.Error as e:
+            await inter.send('Ошибка сохранения данных о транзакции')
+        
     else:
         await inter.send('Недостаточно средств')
     cur.close()
